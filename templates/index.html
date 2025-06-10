@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ScanMe.in</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter :wght@400;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+
+  <!-- Local Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <!-- Logo -->
+  <div class="logo">ScanMe.in</div>
+
+  <div class="container">
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">
+              {{ message }}
+              <button class="flash-close-btn" onclick="this.parentElement.remove()">×</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if session.logged_in %}
+    <!-- Top Right Menu Button -->
+    <div class="top-right-menu">
+      <button class="menu-btn" onclick="toggleMenu()" title="Open Menu">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div id="popup-menu" class="popup-menu">
+        <a href="/"><i class="fas fa-home"></i> Home</a>
+        <a href="{{ manual_testing_link }}" target="_blank"><i class="fas fa-tools"></i> Manual Testing</a>
+        <a href="#about"><i class="fas fa-user-shield"></i> About</a>
+        <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if session.logged_in %}
+    <!-- Scan Form -->
+    <div class="card">
+      <form method="POST" action="/" onsubmit="startScan()">
+        <input type="url" name="url" placeholder="Enter website URL (e.g., https://example.com )" required value="{{ url }}">
+        <button id="scan-btn" type="submit">
+          Start Scan <span id="spinner" class="spinner" style="display:none;"></span>
+        </button>
+      </form>
+    </div>
+
+    {% if report_generated %}
+    <!-- Scan Results -->
+    <div class="card scan-results">
+      <h2>Scan Results</h2>
+      <p><strong>Scanned URL:</strong> {{ url }}</p>
+      <p><strong>Scan Time:</strong> {{ scan_time }}</p>
+
+      <div class="table-container">
+        <table class="styled-table">
+          <thead>
+            <tr>
+              <th>Attack</th>
+              <th>Protocol</th>
+              <th>Status</th>
+              <th>Time Taken</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in table_rows %}
+            <tr class="{% if row[2] == 'Success' %}highlight{% endif %}">
+              <td>{{ row[0] }}</td>
+              <td>{{ row[1] }}</td>
+              <td>{{ row[2] }}</td>
+              <td>{{ row[3] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if successful_attacks %}
+      <div class="vulnerabilities-found">
+        <h3>Vulnerabilities Found:</h3>
+        <ul>
+          {% for attack in successful_attacks %}
+          <li>{{ attack }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <div class="no-vulnerabilities">
+        <p>No vulnerabilities were found.</p>
+      </div>
+      {% endif %}
+
+      <a href="{{ url_for('download_report') }}?filename={{ report_filename }}" class="download-btn">
+        <i class="fas fa-download"></i> Download Full Report
+      </a>
+    </div>
+    {% endif %}
+
+    <!-- About Section -->
+    <section id="about" class="card">
+      <h2>About</h2>
+      <p>ScanMe is an open-source security scanner for developers and cybersecurity professionals.</p>
+    </section>
+
+    <!-- Vulnerability Cards -->
+    <section class="card vulnerability-section">
+      <h2>Common Web Vulnerabilities</h2>
+      <div class="vulnerability-grid">
+        {% set attacks = [
+          {
+            'name': 'SQL Injection',
+            'icon': 'fas fa-database',
+            'desc': 'Injects malicious SQL code into input fields to extract or manipulate database content.'
+          },
+          {
+            'name': 'XSS (Cross-Site Scripting)',
+            'icon': 'fas fa-code',
+            'desc': 'Injects scripts into web pages viewed by others to steal data or deface websites.'
+          },
+          {
+            'name': 'NoSQL Injection',
+            'icon': 'fas fa-project-diagram',
+            'desc': 'Exploits NoSQL databases like MongoDB to bypass authentication or extract unauthorized data.'
+          },
+          {
+            'name': 'XXE (XML External Entity)',
+            'icon': 'fas fa-file-alt',
+            'desc': 'Abuses XML processors to read local files or perform SSRF attacks via crafted XML input.'
+          },
+          {
+            'name': 'SSRF (Server Side Request Forgery)',
+            'icon': 'fas fa-network-wired',
+            'desc': 'Tricks the server into making requests on behalf of the attacker to internal systems.'
+          },
+          {
+            'name': 'Brute Force Login',
+            'icon': 'fas fa-lock-open',
+            'desc': 'Tries common username/password combos to gain unauthorized access to accounts.'
+          },
+          {
+            'name': 'Command Injection',
+            'icon': 'fas fa-terminal',
+            'desc': 'Runs OS-level commands through vulnerable inputs, potentially giving full server control.'
+          },
+          {
+            'name': 'Path Traversal',
+            'icon': 'fas fa-folder-open',
+            'desc': 'Uses ../ patterns to access restricted files outside the intended folder.'
+          },
+          {
+            'name': 'Open Redirect',
+            'icon': 'fas fa-directions',
+            'desc': 'Redirects users to an attacker-controlled domain, often used for phishing or malware spread.'
+          }
+        ] %}
+
+        {% for attack in attacks %}
+        <div class="vuln-card">
+          <i class="{{ attack.icon }}"></i>
+          <h4>{{ attack.name }}</h4>
+          <p>{{ attack.desc }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Educational Tool Cards -->
+    <section class="card tool-section">
+      <h2>Security Tools & Resources</h2>
+      <div class="tool-grid">
+        <!-- Card 1: OWASP Top Ten -->
+        <a href="https://owasp.org/www-project-top-ten/ " target="_blank" class="tool-card">
+          <i class="fas fa-shield-alt"></i>
+          <h4>OWASP Top Ten</h4>
+          <p>The OWASP Top Ten is a globally recognized standard that highlights the most critical security risks to web applications, helping developers and organizations improve their security practices.</p>
+        </a>
+
+        <!-- Card 2: Burp Suite -->
+        <a href="https://portswigger.net/burp " target="_blank" class="tool-card">
+          <i class="fas fa-tools"></i>
+          <h4>Burp Suite</h4>
+          <p>Burp Suite is a leading web security testing software by PortSwigger, widely used for penetration testing and vulnerability assessment in web applications.</p>
+        </a>
+
+        <!-- Card 3: Postman -->
+        <a href="https://learning.postman.com/docs/ " target="_blank" class="tool-card">
+          <i class="fas fa-magic"></i>
+          <h4>Postman</h4>
+          <p>Postman is a powerful API platform that simplifies the entire API lifecycle, enabling developers to design, test, and collaborate efficiently on API development.</p>
+        </a>
+
+        <!-- Card 4: OWASP ZAP -->
+        <a href="https://owasp.org/www-project-zed-attack-proxy/ " target="_blank" class="tool-card">
+          <i class="fas fa-bug"></i>
+          <h4>OWASP ZAP</h4>
+          <p>OWASP ZAP (Zed Attack Proxy) is a free and open-source web application security scanner designed to help developers and security professionals identify vulnerabilities in web applications.</p>
+        </a>
+      </div>
+    </section>
+
+    {% else %}
+    <!-- Authentication Box -->
+    <div class="auth-box">
+      <!-- Sign Up Card -->
+      <div class="auth-card">
+        <h2>Sign Up</h2>
+        <form method="POST" action="/signup" class="auth-form">
+          <input type="text" name="username" placeholder="Choose a username" required />
+          <input type="password" name="password" placeholder="Create a password" required />
+          <button type="submit">Sign Up</button>
+        </form>
+        <p class="toggle-msg">Already registered? <a href="#" onclick="toggleForms(event)">Login here</a></p>
+      </div>
+
+      <!-- Login Card -->
+      <div class="auth-card hidden" id="login-form-card">
+        <h2>Login</h2>
+        <form method="POST" action="/login" class="auth-form">
+          <input type="text" name="username" placeholder="Username" required />
+          <input type="password" name="password" placeholder="Password" required />
+          <button type="submit">Login</button>
+        </form>
+        <p class="toggle-msg">Don't have an account? <a href="#" onclick="toggleForms(event)">Sign up here</a></p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <footer>
+    <p>ScanMe © 2025 | {% if report_generated %}Last scan: {{ scan_time }}{% else %}Ready to scan{% endif %}</p>
+  </footer>
+
+  <script>
+    function toggleMenu() {
+      const menu = document.getElementById("popup-menu");
+      menu.classList.toggle("show");
+    }
+
+    function startScan() {
+      const scanBtn = document.getElementById("scan-btn");
+      const spinner = document.getElementById("spinner");
+
+      scanBtn.disabled = true;
+      scanBtn.textContent = "Scanning...";
+      spinner.style.display = "inline-block";
+
+      setTimeout(() => {
+        scanBtn.textContent = "Start Scan";
+        spinner.style.display = "none";
+        scanBtn.disabled = false;
+      }, 2000);
+    }
+
+    function toggleForms(event) {
+      event.preventDefault();
+      const signupCard = document.querySelector(".auth-card:not(.hidden)");
+      const loginCard = document.getElementById("login-form-card");
+
+      if (signupCard && loginCard) {
+        signupCard.classList.add("hidden");
+        loginCard.classList.remove("hidden");
+      } else {
+        document.querySelector(".auth-card.hidden")?.classList.remove("hidden");
+      }
+    }
+
+    // Auto-remove flash messages after 5 seconds
+    window.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll('.flash-message').forEach(msg => {
+        setTimeout(() => {
+          msg.style.opacity = '0';
+          setTimeout(() => msg.remove(), 300);
+        }, 5000);
+      });
+    });
+
+    // Close menu when clicking outside
+    window.onclick = function(event) {
+      const menu = document.getElementById("popup-menu");
+      const btn = document.querySelector(".menu-btn");
+      if (!btn.contains(event.target) && !menu.contains(event.target)) {
+        menu.classList.remove("show");
+      }
+    }
+  </script>
+</body>
+</html>

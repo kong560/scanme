@@ -1,0 +1,11 @@
+{
+  "admin": {
+    "password": "securepassword123"
+  },
+  "test": {
+    "password": "anirudh1234"
+  },
+  "rishishrivastava888@gmail.com": {
+    "password": "rishi123"
+  }
+}
